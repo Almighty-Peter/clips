@@ -26,6 +26,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import re
 import matplotlib.pyplot as plt
 import random
+import platform
 
 from moviepy.editor import *
 from moviepy.config import change_settings
@@ -37,6 +38,11 @@ change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/convert"})
 import cv2
 import numpy as np
 
+
+if system == "Darwin":  # macOS
+    download_path = "/Users/peternyman/Downloads/"
+elif system == "Windows":  # Windows
+    download_path = "C:\\Users\\YourUsername\\Downloads\\"
 
 
 
@@ -132,19 +138,13 @@ def main(videoId):
     print("timeStamps:",timeStamps)
     
     
-    
-    os.environ["IMAGEIO_FFMPEG_EXE"] = "/opt/homebrew/bin/ffmpeg"
-    
-    
-    download_path = "/Users/peternyman/Downloads"
-    
     def download_video():
     
         url = f'https://www.youtube.com/watch?v={videoId}'
         
         ydl_opts = {
             'format': 'bestvideo[vcodec=h264]+bestaudio[acodec=aac]/best',  # Specify H.264 and AAC codecs
-            'outtmpl': f'{download_path}/{videoId}.%(ext)s',  # Output template
+            'outtmpl': f'{download_path}{videoId}.%(ext)s',  # Output template
             'merge_output_format': 'mp4',  # Ensure the final format is mp4
         }
         
@@ -153,13 +153,13 @@ def main(videoId):
     
     def audio_to_text():
         # Convert MP3 to WAV and ensure it's mono
-        audio = AudioSegment.from_mp3(f"{download_path}/{videoId}.mp3")
+        audio = AudioSegment.from_mp3(f"{download_path}{videoId}.mp3")
         audio = audio.set_channels(1)  # Set to mono
-        audio.export(f"{download_path}/{videoId}.wav", format="wav")
+        audio.export(f"{download_path}{videoId}.wav", format="wav")
 
         client = speech.SpeechClient()
 
-        with io.open(f"{download_path}/{videoId}.wav", 'rb') as audio_file:
+        with io.open(f"{download_path}{videoId}.wav", 'rb') as audio_file:
             content = audio_file.read()
 
         audio = speech.RecognitionAudio(content=content)
@@ -245,7 +245,7 @@ def main(videoId):
     
     def clip(start_time, end_time, plot_image_path):
     
-        output_path = f"{download_path}/{videoId}S{start_time}E{end_time}.mp4"
+        output_path = f"{download_path}{videoId}S{start_time}E{end_time}.mp4"
         
         # Define the video properties
         test=4
@@ -272,10 +272,10 @@ def main(videoId):
         out.release()
         
         # Load and resize the content clip
-        content_clip = VideoFileClip(f"{download_path}/{videoId}.mp4").subclip(start_time, end_time)
+        content_clip = VideoFileClip(f"{download_path}{videoId}.mp4").subclip(start_time, end_time)
         audio = content_clip.audio
     
-        audio.write_audiofile(f"{download_path}/{videoId}.mp3")
+        audio.write_audiofile(f"{download_path}{videoId}.mp3")
         
 
         
@@ -334,7 +334,7 @@ def main(videoId):
         
         
         # Add audio to the final composite clip
-        audio_clip = AudioFileClip(f"{download_path}/{videoId}.mp3")
+        audio_clip = AudioFileClip(f"{download_path}{videoId}.mp3")
         
         if audio_clip.duration > final_composite_clip.duration:
             print("Trimming audio to match video duration.")
@@ -349,7 +349,7 @@ def main(videoId):
         
             
     download_video()
-    video = VideoFileClip(download_path+"/"+videoId+".mp4")
+    video = VideoFileClip(download_path+videoId+".mp4")
     for i,timeStamp in enumerate(timeStamps):
         timeStamps[i] = [timeStamp[0]-startClipBeforeSEC,timeStamp[1]+startClipAfterSEC]
     
@@ -357,7 +357,7 @@ def main(videoId):
         plot_image_path = create_plot(videoId, audienceRetentionData, timeStamp)
         clip(timeStamp[0], timeStamp[1], plot_image_path)
     
-    os.remove(download_path+"/"+videoId+".mp4")
+    os.remove(download_path+videoId+".mp4")
 
     
     
