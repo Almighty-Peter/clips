@@ -1,20 +1,23 @@
 sizeOfCaptionstoGptSEC = 22
 distanceFromStarEndSEC = 30
-distanceFromClipsSEC = 10000000
-retentionThreshold = 160 # lower better
+distanceFromClipsSEC = 20
+
+getHowMany = 1
+getManyInstedOfThreshold = True
+retentionThreshold = 60 # lower better
 
 startClipBeforeSEC = 3
 startClipAfterSEC = 1
 getDataFromWeb = True
 
-maxCharsText = 20
-
+borderBettewnText = 40
+maxCharsText = 25     
 
 from YouTubeAudienceRetention import getYoutubeAudienceRetention
 from YoutubeCaptions import getYoutubeCaptions
 from ChatGpt import textToText
 import os
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/peternyman/Downloads/woven-victor-430706-q3-0e3eeca05bbd.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/peternyman/Clips/woven-victor-430706-q3-0e3eeca05bbd.json"
 os.environ["IMAGEIO_FFMPEG_EXE"] = "/opt/homebrew/bin/ffmpeg"
 os.environ["IMAGEIO_FFPROBE_EXE"] = "/opt/homebrew/bin/ffprobe"
 from pytube import YouTube
@@ -34,16 +37,17 @@ from moviepy.config import change_settings
 
 # Ensure ImageMagick path is correctly set
 change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/convert"})
+change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/magick"})
 
 import cv2
 import numpy as np
 
-
+system = platform.system()
 if system == "Darwin":  # macOS
     download_path = "/Users/peternyman/Downloads/"
 elif system == "Windows":  # Windows
     download_path = "C:\\Users\\YourUsername\\Downloads\\"
-
+print(download_path)
 
 
 def main(videoId):
@@ -57,7 +61,7 @@ def main(videoId):
     
      
     while True:
-        smallest = [0,300]  
+        smallest = [0,1000]  
         for i,[percent,retention] in enumerate(audienceRetentionData):
             if getDataFromWeb:
                 seconds = (percent/1000)*length
@@ -75,11 +79,20 @@ def main(videoId):
                     if addData:
                         smallest = [seconds,retention]
         
-        if smallest[1] < retentionThreshold:
-            lowAudienceRetentionData.append(smallest[0])
-            print(f'retention:{smallest[1]}')
+        if getManyInstedOfThreshold:
+            if smallest[1] == 1000:
+                break
+            elif len(lowAudienceRetentionData) >= getHowMany:
+                break
+            else:
+                lowAudienceRetentionData.append(smallest[0])
+                print(f'retention:{smallest[1]}')
         else:
-            break
+            if smallest[1] < retentionThreshold:
+                lowAudienceRetentionData.append(smallest[0])
+                print(f'retention:{smallest[1]}')
+            else:
+                break
                 
         
     
@@ -133,6 +146,7 @@ def main(videoId):
         print(result)
         timestamps = [round(float(timestamp)) for timestamp in re.findall(pattern, result)]
         print([timestamps[-2],timestamps[-1]])
+        # here must fix so that if it dosent append any it should automaticly be the first and the last 
         timeStamps.append(([timestamps[-2],timestamps[-1]]))
     
     print("timeStamps:",timeStamps)
@@ -184,29 +198,7 @@ def main(videoId):
         
         return transcript
         
-        
-    def split_transcript_into_chunks(transcript, max_size):
-        words = list(transcript.values())
-        timestamps = list(transcript.keys())
-        
-        chunks = {}
-        current_chunk = []
-        current_start_time = timestamps[0]
 
-        for i, word in enumerate(words):
-            if sum(len(w) for w in current_chunk) + len(word) + len(current_chunk) <= max_size:
-                current_chunk.append(word)
-            else:
-                chunks[current_start_time] = ' '.join(current_chunk)
-                current_chunk = [word]
-                current_start_time = timestamps[i]
-        
-        if current_chunk:
-            chunks[current_start_time] = ' '.join(current_chunk)
-
-        return chunks
-
-    
     # Function to generate a random color
     def get_random_color():
         return (random.random(), random.random(), random.random())
@@ -245,7 +237,7 @@ def main(videoId):
     
     def clip(start_time, end_time, plot_image_path):
     
-        output_path = f"{download_path}{videoId}S{start_time}E{end_time}.mp4"
+        
         
         # Define the video properties
         test=4
@@ -259,7 +251,9 @@ def main(videoId):
         
         # Create a VideoWriter object
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
-        out = cv2.VideoWriter(output_path, fourcc, frame_rate, (frame_width, frame_height))
+        
+        clipsOutputPath = f"/Users/peternyman/Clips/Clips/YT={videoId}S={timeStamps[0]}E={timeStamps[1]}.mp4"
+        out = cv2.VideoWriter(clipsOutputPath, fourcc, frame_rate, (frame_width, frame_height))
         
         # Create a black frame
         black_frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
@@ -295,39 +289,85 @@ def main(videoId):
             content_clip.set_position(('center', 'top')),
             plot_clip.set_position(('center', 'bottom'))
         ], size=(frame_width, frame_height))
-        
-        
+
 
 
 
         transcript = audio_to_text()
-        transcriptChunk = split_transcript_into_chunks(transcript, maxCharsText)
         
         
-        
-        
-        
-        # Create TextClips for each chunk
         text_clips = []
-        
-        # Sort the keys to ensure the correct order
-        sorted_chunk_times = sorted(transcriptChunk.keys())
-        
-        for i, start_time in enumerate(sorted_chunk_times):
-            text = transcriptChunk[start_time]
-            # Determine the duration of the TextClip
-            if i < len(sorted_chunk_times) - 1:
-                end_time = sorted_chunk_times[i + 1]  # Use sorted keys to get the next time
-            else:
-                end_time = composite_clip.duration  # Use the duration of the composite clip for the last chunk
-        
-            duration = end_time - start_time
-            text_clip = TextClip(text, fontsize=24, color='white').set_position('center').set_start(start_time).set_duration(duration)
-            text_clips.append(text_clip)
+        while len(transcript) != 0:
+            chunkSave = []
+            chunk = ""
+            transcript_list = sorted(transcript.items())
+            for i, (timestamp, word) in enumerate(transcript_list):
+                if len(word) + len(chunk) <= maxCharsText + 1:
+                    chunk += word + " "
+                    del transcript[timestamp]
+                    chunkSave.append([timestamp, word])
+
+                else:
+                    
+                    break
+
+            print(f"---------------{chunkSave}----------------")
+            star_time = chunkSave[0][0]
+            for i, (timestampI, wordI) in enumerate(chunkSave):
+                transcript_list.pop(0)
+                
+                
+                # Determine duration by looking at the next word's timestamp
+                if i < len(chunkSave) - 1:
+                    next_timestamp = chunkSave[i + 1][0]
+                else:
+                    next_timestamp = transcript_list[0][0] if transcript_list else timestampI
+
+                durationI = next_timestamp - timestampI
+
+                word_clips = []
+                
+                for j, (timestampJ, wordJ) in enumerate(chunkSave):
+                    space_clip = TextClip(" ",font="DejaVu Mono Sans", fontsize=50, color='white',).set_start(timestampI).set_duration(durationI)    
+                    
+                    if timestampJ == timestampI:
+                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=50, color='black',bg_color='yellow').set_start(timestampI).set_duration(durationI)
+                    else:
+                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=50, color='white').set_start(timestampI).set_duration(durationI)
+                    
+                    word_clips.append(word_clip)
+                    word_clips.append(space_clip)
+                
+                # Define the maximum width before wrapping to the next line
+                
+
+                # Adjust the positions of each text clip to wrap when exceeding max_width
+                cumulative_width = 0
+                cumulative_height = 0
+                line_height = max([clip.h for clip in word_clips])
+                
+                positioned_clips = []
+
+                for clip in word_clips:
+                    if cumulative_width + clip.w > frame_width-borderBettewnText:
+                        cumulative_width = 0
+                        cumulative_height += line_height  # Move to the next line
+                    positioned_clips.append(clip.set_position((cumulative_width, cumulative_height)))
+                    cumulative_width += clip.w
+
+                # Calculate the final dimensions
+                final_width = frame_width-borderBettewnText
+                final_height = cumulative_height + line_height
+
+                # Create the final composite video clip
+                text_clip = CompositeVideoClip(positioned_clips, size=(final_width, final_height)).set_position("center")
+                text_clips.append(text_clip)
+    
         
         # Combine the text clips with the original composite_clip
         final_clips = [composite_clip] + text_clips
         final_composite_clip = CompositeVideoClip(final_clips, size=(frame_width, frame_height))
+        
         
         
         
@@ -343,7 +383,7 @@ def main(videoId):
         final_composite_clip = final_composite_clip.set_audio(audio_clip)
         
         # Write the final video to file
-        final_composite_clip.write_videofile(output_path, fps=frame_rate, codec='libx264', audio_codec='aac', verbose=True, logger='bar')
+        final_composite_clip.write_videofile(clipsOutputPath, fps=frame_rate, codec='libx264', audio_codec='aac', verbose=True, logger='bar')
                     
         
         
@@ -357,11 +397,11 @@ def main(videoId):
         plot_image_path = create_plot(videoId, audienceRetentionData, timeStamp)
         clip(timeStamp[0], timeStamp[1], plot_image_path)
     
-    os.remove(download_path+videoId+".mp4")
+    #os.remove(download_path+videoId+".mp4")
 
     
+     
     
-    
-main("CaFxF2uDsw0")  
+main("m7YSTtiPMl4")  
     
     
