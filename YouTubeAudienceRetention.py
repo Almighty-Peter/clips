@@ -18,41 +18,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-
-
-def getYoutubeAudienceRetention(videoId, plot=False, show=False):
-
-    # Setup Chrome options
-    chrome_options = Options()
-    if show == False:
-        chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without GUI)
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # Initialize the Chrome driver
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
-    
-    result= False
-    
-    try:
-        url = f"https://www.youtube.com/watch?v={videoId}"
-    
-        # Open the YouTube link
-        driver.get(url)
-    
-        # Use the provided XPath to locate the element and modify it
-        xpath = '/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div'
-    
-        element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, xpath))
-        )
-        # Modify the element using JavaScript
-        new_class_value = 'html5-video-player ytp-transparent ytp-exp-bottom-control-flexbox ytp-modern-caption ytp-exp-ppp-update ytp-bigboards ytp-hide-info-bar ytp-fine-scrubbing-exp ytp-fit-cover-video ytp-autonav-endscreen-cancelled-state ytp-heat-map-v2 ytp-heat-map ytp-iv-drawer-enabled ytp-branding-shown ad-created paused-mode ytp-progress-bar-hover'
-        driver.execute_script("arguments[0].setAttribute('class', arguments[1]);", element, new_class_value)
-        print("Element modified successfully.")
-        
-    
-        def find_element(driver, start_index, end_index, timeout=30, div=2):
+def find_element(driver, start_index, end_index, timeout=30, div=2):
             end_time = time.time() + timeout
             while time.time() < end_time:
                 for i in range(start_index, end_index + 1):
@@ -67,35 +33,81 @@ def getYoutubeAudienceRetention(videoId, plot=False, show=False):
                             return None
                             """here should triger the code to run many time and change div"""
                         element = WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                        print(xpath)
+                        print("Found Data")
                         return element
                     except:
                         continue
 
             return None
+
+def getYoutubeAudienceRetention(videoId, plot=False, show=False):
+
+    # Setup Chrome options
+    chrome_options = Options()
+    if show == False:
+        chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without GUI)
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+
+    # Initialize the Chrome driver
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+    
+    
+    try:
+        url = f"https://www.youtube.com/watch?v={videoId}"
+
+        found = True
+        attempt = 0
+        allowedAttempts = 5
+        while found and attempt < allowedAttempts:
+            # Open the YouTube link
+            driver.get(url)
         
-        # Base XPath with a placeholder for the index
-        """IMPORTANT for videos with many parts, it takes only the first, in theory this is solvable by looking the difrence between each and then assign them to parts based on theire length, but this is for future me to do
-        or maybe even just add them"""
-    
+            # Use the provided XPath to locate the element and modify it
+            xpath = '/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div'
         
-        # Attempt to find the element
-        element = find_element(driver, 20, 50)
-    
-        # Get the outer HTML of the element
-        element_html = element.get_attribute('outerHTML')
-    
-        # Use BeautifulSoup to parse the HTML
-        soup = BeautifulSoup(element_html, 'html.parser')
-    
-    
-    
-        pattern = re.compile(r'd="M ([^"]+)"')
-        # Search for the pattern in the HTML content
-        match = pattern.search(str(soup))
+            element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            # Modify the element using JavaScript
+            new_class_value = 'html5-video-player ytp-transparent ytp-exp-bottom-control-flexbox ytp-modern-caption ytp-exp-ppp-update ytp-bigboards ytp-hide-info-bar ytp-fine-scrubbing-exp ytp-fit-cover-video ytp-autonav-endscreen-cancelled-state ytp-heat-map-v2 ytp-heat-map ytp-iv-drawer-enabled ytp-branding-shown ad-created paused-mode ytp-progress-bar-hover'
+            driver.execute_script("arguments[0].setAttribute('class', arguments[1]);", element, new_class_value)
+            print("Element modified successfully.")
+            
+        
+            
+            
+            # Base XPath with a placeholder for the index
+            """IMPORTANT for videos with many parts, it takes only the first, in theory this is solvable by looking the difrence between each and then assign them to parts based on theire length, but this is for future me to do
+            or maybe even just add them"""
+        
+            
+            # Attempt to find the element
+            element = find_element(driver, 20, 50)
+        
+            # Get the outer HTML of the element
+            element_html = element.get_attribute('outerHTML')
+        
+            # Use BeautifulSoup to parse the HTML
+            soup = BeautifulSoup(element_html, 'html.parser')
         
         
-        data = match.group(1)
+        
+            pattern = re.compile(r'd="M ([^"]+)"')
+            # Search for the pattern in the HTML content
+            match = pattern.search(str(soup))
+            
+            
+            if match:
+                data = match.group(1)
+                print(f"Extracted data")
+                found = False
+            else:
+                attempt += 1
+                print(f"data not downloaded. (TRYING AGAIN Attempt:{attempt}/{allowedAttempts})")
+        # here should make it so that the program stops to try to get this video
+
         elements = [pair for pair in data.split() if pair != 'C']
         
         # Initialize the resulting list
@@ -108,6 +120,7 @@ def getYoutubeAudienceRetention(videoId, plot=False, show=False):
             # Append the pair to the result list
             result.append([x, y])
        
+
         if plot:
             x_values = [pair[0] for pair in result]
             y_values = [pair[1] for pair in result]
