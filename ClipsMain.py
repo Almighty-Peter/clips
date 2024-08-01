@@ -10,7 +10,7 @@ startClipBeforeSEC = 3
 startClipAfterSEC = 1
 getDataFromWeb = True
 
-borderBettewnText = 40
+borderBettewnText = 100
 maxCharsText = 25     
 
 from YouTubeAudienceRetention import getYoutubeAudienceRetention
@@ -30,6 +30,7 @@ import re
 import matplotlib.pyplot as plt
 import random
 import platform
+import math
 
 from moviepy.editor import *
 from moviepy.config import change_settings
@@ -157,13 +158,15 @@ def main(videoId):
         url = f'https://www.youtube.com/watch?v={videoId}'
         
         ydl_opts = {
-            'format': 'bestvideo[vcodec=h264]+bestaudio[acodec=aac]/best',  # Specify H.264 and AAC codecs
-            'outtmpl': f'{download_path}{videoId}.%(ext)s',  # Output template
-            'merge_output_format': 'mp4',  # Ensure the final format is mp4
+            'format': 'bestvideo+bestaudio/best',  # More flexible format selection
+            'outtmpl': f'{download_path}{videoId}.%(ext)s',
+            'merge_output_format': 'mp4',
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
+
+
     
     def audio_to_text():
         # Convert MP3 to WAV and ensure it's mono
@@ -252,7 +255,7 @@ def main(videoId):
         # Create a VideoWriter object
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
         
-        clipsOutputPath = f"/Users/peternyman/Clips/Clips/YT={videoId}S={timeStamps[0]}E={timeStamps[1]}.mp4"
+        clipsOutputPath = f"/Users/peternyman/Clips/Clips/YT={videoId}S={start_time}E={end_time}.mp4"
         out = cv2.VideoWriter(clipsOutputPath, fourcc, frame_rate, (frame_width, frame_height))
         
         # Create a black frame
@@ -274,16 +277,27 @@ def main(videoId):
 
         
         # Calculate new heights for content and plot to fit within the total frame height
-        content_height = int(frame_height * 0.5)
-        plot_height = frame_height - frame_height * 0.6
+        content_height = int(frame_height * 0.6)
+        plot_height = frame_height - content_height
+
+        brainRoot = random.choice([file for file in os.listdir('/Users/peternyman/Clips/BrainRoot') if file.endswith('mp4')])
+        brainRoot = f'/Users/peternyman/Clips/BrainRoot/{brainRoot}'
+        print(brainRoot)
+        
+       
+        
+        brainRootDuration = math.floor(VideoFileClip(brainRoot).duration)
+        
+        startBrainRoot = random.randrange(0,brainRootDuration-duration_seconds)
+        
+        # Convert the plot image to a video clip, resize it to fit the new height while maintaining aspect ratio
+        
+        plot_clip = VideoFileClip(brainRoot).subclip(startBrainRoot, duration_seconds + startBrainRoot).resize(height=plot_height)
+        # plot_clip = plot_clip.resize(height=plot_height)
         
         # Resize the content clip to fit the new height while maintaining aspect ratio
         content_clip = content_clip.resize(height=content_height)
-        
-        # Convert the plot image to a video clip, resize it to fit the new height while maintaining aspect ratio
-        plot_clip = ImageClip(plot_image_path).set_duration(duration_seconds)
-        plot_clip = plot_clip.resize(height=plot_height)
-        
+
         # Combine the content and plot clips
         composite_clip = CompositeVideoClip([
             content_clip.set_position(('center', 'top')),
@@ -328,12 +342,12 @@ def main(videoId):
                 word_clips = []
                 
                 for j, (timestampJ, wordJ) in enumerate(chunkSave):
-                    space_clip = TextClip(" ",font="DejaVu Mono Sans", fontsize=50, color='white',).set_start(timestampI).set_duration(durationI)    
+                    space_clip = TextClip(" ",font="DejaVu Mono Sans", fontsize=25, color='white',).set_start(timestampI).set_duration(durationI)    
                     
                     if timestampJ == timestampI:
-                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=50, color='black',bg_color='yellow').set_start(timestampI).set_duration(durationI)
+                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=25, color='black',bg_color='yellow').set_start(timestampI).set_duration(durationI)
                     else:
-                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=50, color='white').set_start(timestampI).set_duration(durationI)
+                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=25, color='white').set_start(timestampI).set_duration(durationI)
                     
                     word_clips.append(word_clip)
                     word_clips.append(space_clip)
@@ -402,6 +416,6 @@ def main(videoId):
     
      
     
-main("m7YSTtiPMl4")  
+main("ZYsJQmKeZb4")  
     
     
