@@ -1,14 +1,15 @@
-# import time
-# import random
-# import requests
-# from selenium import webdriver
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.common.action_chains import ActionChains
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.common.keys import Keys
-# from selenium.common.exceptions import NoSuchElementException
-# from webdriver_manager.chrome import ChromeDriverManager as CM
+
+""" click where to uplod file
+//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[1]/div/div/div/div[1]/div/div/div[2]/div[3]/button[1]/div/div
+//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[1]/div/div/div/div[1]
+
+click where to add description
+//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[1]/div/div[2]/div[1]/div/div/div
+
+post button
+//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[8]/button[1]/div/div """
+
+
 
 # print('=====================================================================================================')
 # print('Heyy, you have to login manully on tiktok, so the bot will wait you 1 minute for loging in manually!')
@@ -105,30 +106,14 @@
 # upload(r"C:\Users\redi\Videos\your-video-here.mov")
 # # ================================================================
 
-"""
-Script for generating outlook.com account with randomly generated data
-Built with: Selenium, 2Captcha and Faker package
-"""
-
-# import os
-import random
-import secrets
 from pynput import keyboard
-# import shutil
-import string
-# import zipfile
+
 from time import sleep
-# from pprint import pprint
-# from uuid import uuid4
-from random import choice
-import calendar
-import sqlite3
-from datetime import datetime
+import re
 
+import json
+import pyautogui
 
-# import requests
-from faker import Faker
-# from captcha_solver import CaptchaSolver
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.keys import Keys
@@ -146,170 +131,171 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 
-# 2Captcha API key here
-from proxy_auth import manifest_json, background_js, plugin_file
-import pygame
-
-
-class OutlookAccountCreator:
-    """ Class for creating outlook.com account
-    with randomly generated details"""
-    URLLogin = 'https://www.tiktok.com/login'
+class TikTokUpload:
+    URLLogin = 'https://www.tiktok.com/login/phone-or-email/email'
     URLUpload = 'https://www.tiktok.com/upload/?lang=en'
 
 
-    def __init__(self):
-        self.driver = self.__open_browser()
+    def __init__(self, selenium= False):
+        
+        if selenium:
+            self.driver = self.__open_browser()
+            self.uploadSelenium()
 
-    def create_account(self):
+    def uploadSelenium(self):
+        userName = 'say_whattt1'
+        password = 'hQH7Panh$3'
         self.driver.get(self.URLLogin)
-        sleep(40)
+        
+        
+        # Enter Username
+        WebDriverWait(self.driver, 1000).until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[1]/input'))
+        )
+        ActionChains(self.driver) \
+            .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[1]/input'), userName) \
+            .send_keys(Keys.ENTER).pause(3).perform()
+        
+        # Enter Password
+        WebDriverWait(self.driver, 1000).until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[2]/div/input'))
+        )
+        ActionChains(self.driver) \
+            .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[2]/div/input'), password) \
+            .send_keys(Keys.ENTER).pause(3).perform()
+        
+        sleep(1000)
+        
         while False:
-            self.driver.get(self.URLUpload)
+            # TODO: do it so that it can use selenium, but i found some problems
+            pass
 
-
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'liveSwitch'))
-            )
-            self.driver.find_element(By.ID, 'liveSwitch').click()
-            print("liveSwitch")
-
-            person = self.__generate_random_details()
-            birth_date = person['dob']
-
-            # Enter Email
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'usernameInput'))
-            )
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.ID, 'usernameInput'), person['username']) \
-                .send_keys(Keys.ENTER).pause(3).perform()
-            print("usernameInput")
-            # Enter Password
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'Password'))
-            )
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.ID, 'Password'), person['password']) \
-                .send_keys(Keys.ENTER).pause(3).perform()
-            print("Password")
-            # Enter First and Last Name
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'firstNameInput'))
-            )
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'lastNameInput'))
-            )
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.ID, 'firstNameInput'), person['first_name']) \
-                .send_keys_to_element(self.driver.find_element(By.ID, 'lastNameInput'), person['last_name']) \
-                .send_keys(Keys.ENTER).pause(3).perform()
-            print("firstNameInput")
-            print("lastNameInput")
-            
-            # Enter Country and DOB
-            country_option_xpath = f'//option[@value="{person["country"]}"]'
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.XPATH, country_option_xpath))
-            ).click()
-            print(f'country_option')
-
-                    # Enter Email
-            WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="BirthYear"]'))
-            )
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="BirthYear"]'), birth_date.year).perform()
-            print(f'BirthYear')
-
-            # Select the birth day
-            day_select = WebDriverWait(self.driver, 10000).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="BirthDay"]'))
-            )
-            
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="BirthDay"]'), birth_date.day).perform()
-            print("BirthDay")
-            # Select the birth month
-            month_select = WebDriverWait(self.driver, 10000).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="BirthMonth"]'))
-            )
-            
-            ActionChains(self.driver) \
-                .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="BirthMonth"]'), calendar.month_name[birth_date.month]).perform()
-            print("BirthMonth")
-            # Click the signup button
-            signup_button = WebDriverWait(self.driver, 1000).until(
-                EC.element_to_be_clickable((By.ID, 'nextButton'))
-            )
-            signup_button.click()
-
-
-            
-
-            
-            
-
-
-
-
-            # Prepare the data
-            email = person['username'] + '@outlook.com'
-            password = person['password']
-            firstName = person['first_name']
-            lastName = person['last_name']
-            dob = person['dob'].strftime('%d, %b %Y')
-            country = person['country']
-
-            # Insert the data into the database
-            conn = sqlite3.connect('/Users/peternyman/Clips/outlook.db')
-            cursor = conn.cursor()
-
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS people (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL,
-                password TEXT NOT NULL,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                dob TEXT NOT NULL,
-                country TEXT NOT NULL
-            )
-            ''')
-
-            cursor.execute('''
-            INSERT INTO people (email, password, first_name, last_name, dob, country)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (email, password, firstName, lastName, dob, country))
-
-            # Commit the changes and close the connection
-            conn.commit()
-            conn.close()
-
-            print("--------------------------------------------------------")
-            print(email)
-            print(password)
-            print(dob)
-
-
-
-    
 
     @staticmethod
     def __open_browser():
-        # TODO: add user agent
-        #chrome_options = webdriver.ChromeOptions()
         
         chrome_options = Options()
-        #chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without GUI)
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         return webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+    
+    @staticmethod
+    def on_press(key):
+        if key == keyboard.Key.enter:
+            return False  # Stop the listener
+
+    def wait_for_enter(self):
+        print("Waiting for Enter key...")
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            listener.join()
+    
+    @staticmethod
+    def text_until_first_hashtag(text):
+        match = re.search(r'#\w+', text)
+        if match:
+            return text[:match.start()]
+        else:
+            return text
         
+    @staticmethod
+    def extract_hashtags(text):
+        hashtags = re.findall(r'#\w+', text)
+        return hashtags
+
+    def type(self,text):
+        pyautogui.write(self.text_until_first_hashtag(text))
+        hashtags = self.extract_hashtags(text)
+        for hashtag in hashtags:
+            pyautogui.write(hashtag)  
+            sleep(1.2)
+            pyautogui.press('enter')  
+            sleep(0.5) 
 
 
-account_creator = OutlookAccountCreator()
 
-account_creator.create_account()
+    def saveActions(self):
+        actions = []
+
+        # 1. Click on the file manager
+        self.wait_for_enter()
+        coordinates = pyautogui.position()
+        actions.append({"action": "file manager", "coordinates": [coordinates.x,coordinates.y]})
+
+        # 2. Drag and Drop
+        self.wait_for_enter()
+        start_pos = pyautogui.position()
+        self.wait_for_enter()
+        end_pos = pyautogui.position()
+        actions.append({"action": "drag and drop", "start": [start_pos.x,start_pos.y], "end": [end_pos.x,end_pos.y]})
+
+        # 3. Click on text
+        self.wait_for_enter()
+        coordinates = pyautogui.position()
+        actions.append({"action": "text", "coordinates": [coordinates.x,coordinates.y]})
+
+
+        # 7. Click on post
+        self.wait_for_enter()
+        coordinates = pyautogui.position()
+        actions.append({"action": "post", "coordinates": [coordinates.x,coordinates.y]})
+
+
+        # 8. Click upload another video
+        self.wait_for_enter()
+        coordinates = pyautogui.position()
+        actions.append({"action": "upload another video", "coordinates": [coordinates.x,coordinates.y]})
+
+
+        # Save actions to JSON
+        with open('/Users/peternyman/Clips/actions.json', 'w') as f:
+            json.dump(actions, f, indent=4)
+
+    def execute_actions(self):
+        with open('/Users/peternyman/Clips/actions.json', 'r') as file:
+            actions = json.load(file)
+
+        for action in actions:
+            if action["action"] == "file manager":
+                pyautogui.click(action["coordinates"])
+                sleep(1)
+            elif action["action"] == "drag and drop":
+                pyautogui.moveTo(action["start"])
+                pyautogui.dragTo(action["end"], duration=1, button='left') 
+                sleep(3)
+            elif action["action"] == "text":
+                pyautogui.click(action["coordinates"])
+                sleep(1)
+                pyautogui.hotkey('command', 'a')  # Select all text (Windows), change 'ctrl' to 'command' for macOS
+                text = "Salish checks Nidal's six pack😭💗 #fyp  #viralvideo #viral #fy #blowup #activies? #nalish #nalishforever"
+                sleep(0.5)
+                self.type(text)  # Typing the text
+                sleep(0.5)
+            elif action["action"] == "post":
+                pyautogui.moveTo(action["coordinates"])
+                sleep(0.5)
+                pyautogui.scroll(-1000)  # Scroll down to the bottom
+                sleep(0.5)
+                pyautogui.click(action["coordinates"])
+            elif action["action"] == "upload another video":
+                sleep(3)
+                pyautogui.click(action["coordinates"])
+                sleep(1)
+                pyautogui.scroll(1000)  # Scroll back up to the top
+
+
+sa = TikTokUpload()
+# sa.saveActions()
+
+
+sleep(4)
+sa.execute_actions()
+
+
+
+
+
+
+
+
 
 
