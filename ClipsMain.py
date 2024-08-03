@@ -2,7 +2,7 @@ sizeOfCaptionstoGptSEC = 22
 distanceFromStarEndSEC = 30
 distanceFromClipsSEC = 20
 
-getHowMany = 1
+getHowMany = 10
 getManyInstedOfThreshold = True
 retentionThreshold = 60 # lower better
 
