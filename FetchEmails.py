@@ -26,4 +26,7 @@ data = read_data_from_db(db_path)
 
 # Print the fetched data
 for row in data:
-    print(row)
+    total = ""
+    for item in row:
+        total += str(item) + "¤"
+    print(total)
