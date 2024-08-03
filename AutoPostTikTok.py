@@ -10,7 +10,7 @@ post button
 //*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[8]/button[1]/div/div """
 
 
-
+#
 # print('=====================================================================================================')
 # print('Heyy, you have to login manully on tiktok, so the bot will wait you 1 minute for loging in manually!')
 # print('=====================================================================================================')
