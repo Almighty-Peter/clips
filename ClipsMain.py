@@ -15,6 +15,7 @@ maxCharsText = 25
 
 from YouTubeAudienceRetention import getYoutubeAudienceRetention
 from YoutubeCaptions import getYoutubeCaptions
+from AutoPostTikTok import TikTokUpload
 from ChatGpt import textToText
 import os
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/peternyman/Clips/woven-victor-430706-q3-0e3eeca05bbd.json"
@@ -138,6 +139,8 @@ def main(videoId):
     
     Please proceed with the provided data."""
     
+
+    # TODO: check if what chatgpt says actualy happens
     timeStamps = []
     for caption in captions:
         
@@ -196,7 +199,8 @@ def main(videoId):
             for word_info in alternative.words:
                 word = word_info.word
                 start_time = word_info.start_time
-                start_time_seconds = start_time.seconds + start_time.nanos * 1e-9
+                # start_time_seconds = start_time.seconds + start_time.nanos * 1e-9
+                start_time_seconds = start_time.total_seconds()
                 transcript[start_time_seconds] = word
         
         return transcript
@@ -351,7 +355,6 @@ def main(videoId):
                     
                     word_clips.append(word_clip)
                     word_clips.append(space_clip)
-                
                 # Define the maximum width before wrapping to the next line
                 
 
@@ -389,29 +392,83 @@ def main(videoId):
         
         # Add audio to the final composite clip
         audio_clip = AudioFileClip(f"{download_path}{videoId}.mp3")
+        #TODO: --^
         
-        if audio_clip.duration > final_composite_clip.duration:
-            print("Trimming audio to match video duration.")
-            audio_clip = audio_clip.subclip(0, final_composite_clip.duration)
+
         
         final_composite_clip = final_composite_clip.set_audio(audio_clip)
         
         # Write the final video to file
         final_composite_clip.write_videofile(clipsOutputPath, fps=frame_rate, codec='libx264', audio_codec='aac', verbose=True, logger='bar')
-                    
+        print(yt.title)
+        captions = ""
+        transcript_list = sorted(transcript.items())
+        for timestamp, word in transcript_list:
+            captions += word + " "
+        
+
+#         prompt = f"""Given the following information:
+# - {Captions}: Initial caption or description of the video content
+# - {title}: Title of the video
+# - {youtube_channel}: Name of the YouTube channel
+
+# Create an optimized caption for the video following these guidelines:
+
+# 1. Align the caption with the video's essence, capturing its core message or theme.
+
+# 2. Break the caption into short, digestible lines using line breaks for better readability.
+
+# 3. Use strategic capitalization for emphasis on key words or phrases.
+
+# 4. Make the caption relatable to the target audience, considering their experiences and emotions.
+
+# 5. If possible incorporate a brilliant question that encourages viewers to share their opinions and experiences in the comments.
+
+# 6. Include a strong call-to-action (CTA) that prompts engagement (like, comment, share, or follow).
+
+# 7. Add 8 relevant hashtags at the end to increase discoverability and reach a broader audience.
+
+# Output Format:
+# ```
+# [Optimized multi-line caption with emphasis] or/and [Brilliant question] or/and [Call-to-action]
+
+# [8 relevant hashtags]
+# ```
+
+# Example Output:
+# ```
+# Laid off and feeling LOST? 💼➡️🆕
+
+# It's time to REINVENT yourself! 🚀
+
+# Your next role could be your BEST yet 💪
+
+# How are you turning your setback into a COMEBACK? 🤔
+
+# Double-tap if you're ready to LEVEL UP your career! 👆❤️
+
+# #CareerTransition #JobSearch #PersonalBranding #NetworkingTips #ProfessionalDevelopment #CareerAdvice #JobMarket #SuccessMindset
+# ```
+# """
+        text = "Salish checks Nidal's six pack😭💗 #fyp  #viralvideo #viral #fy #blowup #activies? #nalish #nalishforever"
+        upload = TikTokUpload()
+        upload.execute_actions(text)
+        os.remove(clipsOutputPath)
         
         
             
     download_video()
+    #TODO: Delete the bellow     video = VideoFileClip(download_path+videoId+".mp4")
     video = VideoFileClip(download_path+videoId+".mp4")
     for i,timeStamp in enumerate(timeStamps):
+
         timeStamps[i] = [timeStamp[0]-startClipBeforeSEC,timeStamp[1]+startClipAfterSEC]
     
     for timeStamp in timeStamps:
         plot_image_path = create_plot(videoId, audienceRetentionData, timeStamp)
         clip(timeStamp[0], timeStamp[1], plot_image_path)
     
-    #os.remove(download_path+videoId+".mp4")
+    os.remove(download_path+videoId+".mp4")
 
     
      
