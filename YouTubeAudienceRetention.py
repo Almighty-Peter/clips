@@ -31,7 +31,7 @@ def find_element(driver, start_index, end_index, timeout=30, div=2):
                             pass
                         else:
                             return None
-                            """here should triger the code to run many time and change div"""
+                            # TODO: """here should triger the code to run many time and change div"""
                         element = WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH, xpath)))
                         print("Found Data")
                         return element
