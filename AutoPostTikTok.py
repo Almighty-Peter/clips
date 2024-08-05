@@ -10,7 +10,6 @@ post button
 //*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[8]/button[1]/div/div """
 
 
-#
 # print('=====================================================================================================')
 # print('Heyy, you have to login manully on tiktok, so the bot will wait you 1 minute for loging in manually!')
 # print('=====================================================================================================')
@@ -250,7 +249,7 @@ class TikTokUpload:
         with open('/Users/peternyman/Clips/actions.json', 'w') as f:
             json.dump(actions, f, indent=4)
 
-    def execute_actions(self):
+    def execute_actions(self,text):
         with open('/Users/peternyman/Clips/actions.json', 'r') as file:
             actions = json.load(file)
 
@@ -261,12 +260,12 @@ class TikTokUpload:
             elif action["action"] == "drag and drop":
                 pyautogui.moveTo(action["start"])
                 pyautogui.dragTo(action["end"], duration=1, button='left') 
+                print("drag and drop")
                 sleep(3)
             elif action["action"] == "text":
                 pyautogui.click(action["coordinates"])
                 sleep(1)
                 pyautogui.hotkey('command', 'a')  # Select all text (Windows), change 'ctrl' to 'command' for macOS
-                text = "Salish checks Nidal's six pack😭💗 #fyp  #viralvideo #viral #fy #blowup #activies? #nalish #nalishforever"
                 sleep(0.5)
                 self.type(text)  # Typing the text
                 sleep(0.5)
@@ -283,12 +282,10 @@ class TikTokUpload:
                 pyautogui.scroll(1000)  # Scroll back up to the top
 
 
-sa = TikTokUpload()
-# sa.saveActions()
+# sa = TikTokUpload()
+# # sa.saveActions()
 
 
-sleep(4)
-sa.execute_actions()
 
 
 
