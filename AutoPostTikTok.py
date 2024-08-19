@@ -109,7 +109,7 @@ from pynput import keyboard
 
 from time import sleep
 import re
-
+import pyperclip
 import json
 import pyautogui
 
@@ -202,7 +202,8 @@ class TikTokUpload:
         return hashtags
 
     def type(self,text):
-        pyautogui.write(self.text_until_first_hashtag(text))
+        pyperclip.copy(self.text_until_first_hashtag(text))
+        pyautogui.hotkey('command', 'v')
         hashtags = self.extract_hashtags(text)
         for hashtag in hashtags:
             pyautogui.write(hashtag)  
@@ -261,12 +262,12 @@ class TikTokUpload:
                 pyautogui.moveTo(action["start"])
                 pyautogui.dragTo(action["end"], duration=1, button='left') 
                 print("drag and drop")
-                sleep(3)
             elif action["action"] == "text":
+                sleep(4)
                 pyautogui.click(action["coordinates"])
                 sleep(1)
                 pyautogui.hotkey('command', 'a')  # Select all text (Windows), change 'ctrl' to 'command' for macOS
-                sleep(0.5)
+                sleep(1)
                 self.type(text)  # Typing the text
                 sleep(0.5)
             elif action["action"] == "post":
@@ -282,8 +283,8 @@ class TikTokUpload:
                 pyautogui.scroll(1000)  # Scroll back up to the top
 
 
-# sa = TikTokUpload()
-# # sa.saveActions()
+# save = TikTokUpload()
+# save.saveActions()
 
 
 
