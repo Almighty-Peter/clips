@@ -2,21 +2,21 @@ sizeOfCaptionstoGptSEC = 22
 distanceFromStarEndSEC = 30
 distanceFromClipsSEC = 20
 
-getHowMany = 10
+
 getManyInstedOfThreshold = True
 retentionThreshold = 60 # lower better
 
 startClipBeforeSEC = 3
 startClipAfterSEC = 1
-getDataFromWeb = True
+qualityOfVideo=8 # a multiple of 108 and 192 as this is 1/10 of 1080 by 1920 the frame of tiktok
 
-borderBettewnText = 100
-maxCharsText = 25     
+
+
 
 from YouTubeAudienceRetention import getYoutubeAudienceRetention
 from YoutubeCaptions import getYoutubeCaptions
-from AutoPostTikTok import TikTokUpload
-from ChatGpt import textToText
+# from AutoPostTikTok import TikTokUpload
+from ChatGpt import textToText, get_embedding
 import os
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/peternyman/Clips/woven-victor-430706-q3-0e3eeca05bbd.json"
 os.environ["IMAGEIO_FFMPEG_EXE"] = "/opt/homebrew/bin/ffmpeg"
@@ -33,6 +33,7 @@ import random
 import platform
 import math
 
+
 from moviepy.editor import *
 from moviepy.config import change_settings
 
@@ -42,34 +43,104 @@ change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/convert"})
 change_settings({"IMAGEMAGICK_BINARY": "/opt/homebrew/bin/magick"})
 
 import cv2
+import array
 import numpy as np
+import sqlite3
+from datetime import datetime
+
+
+connection = sqlite3.connect('local_database.db')
+cursor = connection.cursor()
+
+
+
+
+create_table_query = """
+CREATE TABLE IF NOT EXISTS TKCuts (
+    videoId CHAR(11),  
+    channel TEXT,
+    start_time INT,
+    end_time INT,
+    event_date TEXT,
+    embedding BLOB,
+    caption TEXT,
+    TKLink TEXT,
+    brainRoot CHAR(11),
+    brainRoot_startTime INT,
+    brainRoot_endTime INT,
+
+    sizeOfCaptionstoGptSEC INT,
+    distanceFromStarEndSEC INT,
+    distanceFromClipsSEC INT,
+
+    getHowMany INT,
+    getManyInstedOfThreshold BOOLEAN,
+    retentionThreshold INT,
+
+    startClipBeforeSEC INT,
+    startClipAfterSEC INT,
+    qualityOfVideo INT,
+
+    borderBettewnText INT,
+    maxCharsText INT,
+
+    fontDefault TEXT,
+    fontsizeDefault INT,
+    colorDefault TEXT,
+    stroke_colorDefault TEXT,
+    stroke_widthDefault INT,
+
+    fontMarked TEXT,
+    fontsizeMarked INT,
+    colorMarked TEXT,
+    bg_colorMarked TEXT,
+    stroke_colorMarked TEXT,
+    stroke_widthMarked INT, 
+
+    whatCaptalazation INT,
+    
+
+    PRIMARY KEY(videoId, start_time, end_time)
+);
+"""
+
+cursor.execute(create_table_query)
+connection.commit()
 
 system = platform.system()
 if system == "Darwin":  # macOS
     download_path = "/Users/peternyman/Downloads/"
 elif system == "Windows":  # Windows
     download_path = "C:\\Users\\YourUsername\\Downloads\\"
-print(download_path)
 
 
-def main(videoId):
-    audienceRetentionData = getYoutubeAudienceRetention(videoId)
+
+
+
+
+def main(videoId, yt):
+
+
+
+    channel, audienceRetentionData = getYoutubeAudienceRetention(videoId)
+    print(channel)
     getYoutubeCaptions(videoId)
-    yt = YouTube(f'https://www.youtube.com/watch?v={videoId}')
     length = yt.length  
-    
+    getHowMany = math.floor(length/120)
+
+    if getHowMany > 9:
+        getHowMany = 9
+
     
     lowAudienceRetentionData = []
     
      
     while True:
         smallest = [0,1000]  
-        for i,[percent,retention] in enumerate(audienceRetentionData):
-            if getDataFromWeb:
-                seconds = (percent/1000)*length
-            else:
-                seconds = length * ((i+1)/len(audienceRetentionData))
-                print(seconds)
+        for i, retention in enumerate(audienceRetentionData):
+            seconds = length * ((i+1)/len(audienceRetentionData))
+            print(seconds)
+
             if seconds > distanceFromStarEndSEC and seconds < length-distanceFromStarEndSEC:
                 if smallest[1] > retention:
                     # checks if there are any close 
@@ -147,10 +218,10 @@ def main(videoId):
         prompt = f"Identify the central theme or idea in the following text that would be the most viral, and provide the start and end times in the format: [start_time, end_time].\n\n{caption}"
         pattern = r"\b\d+\.\d+\b"
         result = textToText(prompt,system_message)
-        print(result)
+        print(f"--------------------------------------------------------system_message--------------------------------------------------------\n\n{system_message}\n\n--------------------------------------------------------prompt--------------------------------------------------------\n\n{prompt}\n\n--------------------------------------------------------result--------------------------------------------------------\n\n{result}\n\n----------------------------------------------------------------------------------------------------------------")
         timestamps = [round(float(timestamp)) for timestamp in re.findall(pattern, result)]
         print([timestamps[-2],timestamps[-1]])
-        # here must fix so that if it dosent append any it should automaticly be the first and the last 
+        # here must fix so that if it dosent append any it should automaticly be the first and the last --> An error occurred: list index out of range 
         timeStamps.append(([timestamps[-2],timestamps[-1]]))
     
     print("timeStamps:",timeStamps)
@@ -207,84 +278,193 @@ def main(videoId):
         
 
     # Function to generate a random color
-    def get_random_color():
-        return (random.random(), random.random(), random.random())
+    # def get_random_color():
+    #     return (random.random(), random.random(), random.random())
     
-    def create_plot(video_id, audience_retention_data, time_stamps):
-        temp = []
-        for [percent, retention] in audience_retention_data:
-            seconds = (percent / 1000) * length
-            temp.append([seconds, retention])
+    # def create_plot(video_id, audience_retention_data, time_stamps):
+    #     temp = []
+    #     for [percent, retention] in audience_retention_data:
+    #         seconds = (percent / 1000) * length
+    #         temp.append([seconds, retention])
     
-        x_values = [pair[0] for pair in temp]
-        y_values = [pair[1] for pair in temp]
+    #     x_values = [pair[0] for pair in temp]
+    #     y_values = [pair[1] for pair in temp]
     
-        plt.figure(figsize=(10, 6), dpi=200)
-        plt.plot(x_values, y_values, marker='o', linestyle='-')
+    #     plt.figure(figsize=(10, 6), dpi=200)
+    #     plt.plot(x_values, y_values, marker='o', linestyle='-')
     
-        plt.ylabel('Audience Retention')
-        plt.xlabel('Seconds')
-        plt.title(f'YT={video_id} S={time_stamps[0]} E={time_stamps[1]}')
+    #     plt.ylabel('Audience Retention')
+    #     plt.xlabel('Seconds')
+    #     plt.title(f'YT={video_id} S={time_stamps[0]} E={time_stamps[1]}')
     
-        plt.legend([
-            f'Size of captions sent to GPT SEC = {sizeOfCaptionstoGptSEC}\nDistance from start and end SEC = {distanceFromStarEndSEC}\nDistance from clips SEC = {distanceFromClipsSEC}\nRetention threshold = {retentionThreshold}\nStart clip before SEC = {startClipBeforeSEC}\nStart clip after SEC = {startClipAfterSEC}\nget data from web = {getDataFromWeb}'
-        ], loc='upper right')
-        plt.grid(True)
+    #     plt.legend([
+    #         f'Size of captions sent to GPT SEC = {sizeOfCaptionstoGptSEC}\nDistance from start and end SEC = {distanceFromStarEndSEC}\nDistance from clips SEC = {distanceFromClipsSEC}\nRetention threshold = {retentionThreshold}\nStart clip before SEC = {startClipBeforeSEC}\nStart clip after SEC = {startClipAfterSEC}\nget data from web = {getDataFromWeb}'
+    #     ], loc='upper right')
+    #     plt.grid(True)
     
     
-        color = get_random_color()
-        plt.axvline(x=time_stamps[0], color=color, linestyle='-', linewidth=2)
-        plt.axvline(x=time_stamps[1], color=color, linestyle='-', linewidth=2)
+    #     color = get_random_color()
+    #     plt.axvline(x=time_stamps[0], color=color, linestyle='-', linewidth=2)
+    #     plt.axvline(x=time_stamps[1], color=color, linestyle='-', linewidth=2)
         
-        plot_path = "plot.png"
-        plt.savefig(plot_path)
-        plt.close()
-        return plot_path
+    #     plot_path = "plot.png"
+    #     plt.savefig(plot_path)
+    #     plt.close()
+    #     return plot_path
     
     
-    def clip(start_time, end_time, plot_image_path):
-    
+    def clip(start_time, end_time):
+
+        rand = random.randint(0,6)
+        if rand == 0:
+            """Brasil"""
+            maxCharsText = 18  
+            borderBettewnText = 100
+
+            fontDefault="PT-Mono-Bold"
+            fontsizeDefault=7*qualityOfVideo 
+            colorDefault='green2'
+            stroke_colorDefault = "green"
+            stroke_widthDefault = 0.5*qualityOfVideo
+
+            fontMarked="PT-Mono-Bold"
+            fontsizeMarked=7*qualityOfVideo
+            colorMarked='white'
+            bg_colorMarked='yellow'
+            stroke_colorMarked = "blue"
+            stroke_widthMarked = 0.6*qualityOfVideo
+
+
+        elif rand == 1:
+            """tiktok kinda"""
+            maxCharsText = 18  
+            borderBettewnText = 100
+
+            fontDefault="STIXGeneral-BoldItalic"
+            fontsizeDefault=7*qualityOfVideo 
+            colorDefault='white'
+            stroke_colorDefault = "Pink"
+            stroke_widthDefault = 0.5*qualityOfVideo
+
+            fontMarked="STIXGeneral-BoldItalic"
+            fontsizeMarked=7*qualityOfVideo
+            colorMarked='black'
+            bg_colorMarked='Pink'
+            stroke_colorMarked = "white"
+            stroke_widthMarked = 0.5*qualityOfVideo
+
+
+        elif rand == 2:
+            """usa prety cool"""
+            maxCharsText = 18  
+            borderBettewnText = 100
+
+            fontDefault="Arial-Black"
+            fontsizeDefault=9*qualityOfVideo 
+            colorDefault='deepskyblue'
+            stroke_colorDefault = "darkblue"
+            stroke_widthDefault = 0.7*qualityOfVideo
+
+            fontMarked="Arial-Black"
+            fontsizeMarked=9*qualityOfVideo
+            colorMarked='red'
+            bg_colorMarked='lightyellow'
+            stroke_colorMarked = "darkred"
+            stroke_widthMarked = 0.7*qualityOfVideo
+
+        elif rand == 3:
+            """some what cool"""
+            maxCharsText = 18  
+            borderBettewnText = 100
+
+            fontDefault="Impact"
+            fontsizeDefault=9*qualityOfVideo 
+            colorDefault='cyan'
+            stroke_colorDefault = "midnightblue"
+            stroke_widthDefault = 0.8*qualityOfVideo
+
+            fontMarked="Impact"
+            fontsizeMarked=9*qualityOfVideo
+            colorMarked='magenta'
+            bg_colorMarked='palegoldenrod'
+            stroke_colorMarked = "purple"
+            stroke_widthMarked = 0.8*qualityOfVideo
+
+        elif rand == 4:
+            """red and white some what cool"""
+            maxCharsText = 18  
+            borderBettewnText = 100
+
+            fontDefault="Calibri-Bold"
+            fontsizeDefault=10*qualityOfVideo 
+            colorDefault='purple'
+
+            stroke_colorDefault = "palegoldenrod"
+            stroke_widthDefault = 0.5*qualityOfVideo
+
+            fontMarked="Calibri-BoldItalic"
+            fontsizeMarked=10*qualityOfVideo
+            colorMarked='palegoldenrod'
+            bg_colorMarked='black'
+            stroke_colorMarked = "DarkRed"
+            stroke_widthMarked = 0.5*qualityOfVideo
+
+        elif rand == 5:
+            """Neon Glow"""
+            maxCharsText = 14  
+            borderBettewnText = 100
+
+            fontDefault="Verdana"
+            fontsizeDefault=9*qualityOfVideo 
+            colorDefault='limegreen'
+            stroke_colorDefault = "black"
+            stroke_widthDefault = 0.5*qualityOfVideo
+
+            fontMarked="Verdana-Bold"
+            fontsizeMarked=9*qualityOfVideo
+            colorMarked='aqua'
+            bg_colorMarked='darkslategray'
+            stroke_colorMarked = "cyan"
+            stroke_widthMarked = 0.6*qualityOfVideo
+
+        elif rand == 6:
+            """Neon Glow"""
+            maxCharsText = 14  
+            borderBettewnText = 100
+
+            fontDefault="Verdana"
+            fontsizeDefault=9*qualityOfVideo 
+            colorDefault='LightPink'
+            stroke_colorDefault = "HotPink"
+            stroke_widthDefault = 0.5*qualityOfVideo
+
+            fontMarked="Verdana-Bold"
+            fontsizeMarked=9*qualityOfVideo
+            colorMarked='aqua'
+            bg_colorMarked='darkslategray'
+            stroke_colorMarked = "cyan"
+            stroke_widthMarked = 0.6*qualityOfVideo
         
-        
-        # Define the video properties
-        test=4
-        frame_width = 108*test
-        frame_height = 192*test
-        frame_rate = 60
+        frame_width = 108*qualityOfVideo
+        frame_height = 192*qualityOfVideo
+        frame_rate = 40
         duration_seconds = end_time - start_time
-        
-        # Calculate the total number of frames
-        total_frames = frame_rate * duration_seconds
-        
-        # Create a VideoWriter object
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Define the codec
+
         
         clipsOutputPath = f"/Users/peternyman/Clips/Clips/YT={videoId}S={start_time}E={end_time}.mp4"
-        out = cv2.VideoWriter(clipsOutputPath, fourcc, frame_rate, (frame_width, frame_height))
-        
-        # Create a black frame
-        black_frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
-        
-        # Write the black frames to the video file
-        for _ in range(total_frames):
-            out.write(black_frame)
-        
-        # Release the VideoWriter object
-        out.release()
-        
-        # Load and resize the content clip
+        print("clipsOutputPath: "+ clipsOutputPath)
+
         content_clip = VideoFileClip(f"{download_path}{videoId}.mp4").subclip(start_time, end_time)
         audio = content_clip.audio
     
         audio.write_audiofile(f"{download_path}{videoId}.mp3")
         
-
-        
-        # Calculate new heights for content and plot to fit within the total frame height
         content_height = int(frame_height * 0.6)
         plot_height = frame_height - content_height
 
         brainRoot = random.choice([file for file in os.listdir('/Users/peternyman/Clips/BrainRoot') if file.endswith('mp4')])
+        brainRootCode = brainRoot[:11]
+        print("brainRootCode:",brainRootCode)
         brainRoot = f'/Users/peternyman/Clips/BrainRoot/{brainRoot}'
         print(brainRoot)
         
@@ -292,29 +472,29 @@ def main(videoId):
         
         brainRootDuration = math.floor(VideoFileClip(brainRoot).duration)
         
-        startBrainRoot = random.randrange(0,brainRootDuration-duration_seconds)
+        brainRoot_startTime = random.randrange(0,brainRootDuration-duration_seconds)
+
+        if brainRoot_startTime < 0:
+            print(f"ERROR --> you must emedietly delete: {brainRoot}")
         
-        # Convert the plot image to a video clip, resize it to fit the new height while maintaining aspect ratio
-        
-        plot_clip = VideoFileClip(brainRoot).subclip(startBrainRoot, duration_seconds + startBrainRoot).resize(height=plot_height)
-        # plot_clip = plot_clip.resize(height=plot_height)
-        
-        # Resize the content clip to fit the new height while maintaining aspect ratio
+
+        plot_clip = VideoFileClip(brainRoot).subclip(brainRoot_startTime, duration_seconds + brainRoot_startTime).resize(height=plot_height)
+
+
         content_clip = content_clip.resize(height=content_height)
 
-        # Combine the content and plot clips
         composite_clip = CompositeVideoClip([
             content_clip.set_position(('center', 'top')),
             plot_clip.set_position(('center', 'bottom'))
         ], size=(frame_width, frame_height))
 
 
-
-
         transcript = audio_to_text()
-        
+        whatCaptalazation = random.randint(0,2)
         
         text_clips = []
+        transcriptForTiktok = []
+
         while len(transcript) != 0:
             chunkSave = []
             chunk = ""
@@ -328,37 +508,46 @@ def main(videoId):
                 else:
                     
                     break
-
+            
+            totalForTiktok = ""
             print(f"---------------{chunkSave}----------------")
             star_time = chunkSave[0][0]
             for i, (timestampI, wordI) in enumerate(chunkSave):
                 transcript_list.pop(0)
+                totalForTiktok += wordI + " "
                 
                 
-                # Determine duration by looking at the next word's timestamp
                 if i < len(chunkSave) - 1:
                     next_timestamp = chunkSave[i + 1][0]
                 else:
                     next_timestamp = transcript_list[0][0] if transcript_list else timestampI
 
                 durationI = next_timestamp - timestampI
-
+            
                 word_clips = []
-                
+
+
                 for j, (timestampJ, wordJ) in enumerate(chunkSave):
-                    space_clip = TextClip(" ",font="DejaVu Mono Sans", fontsize=25, color='white',).set_start(timestampI).set_duration(durationI)    
+
+
+                    if whatCaptalazation == 1:
+                        wordI = wordI.upper()
+                    elif whatCaptalazation == 2:
+                        wordI = wordI.upper()
+                        wordJ = wordJ.upper()
+                    space_clip = TextClip(" ",font=fontDefault, fontsize=fontsizeDefault, color=colorDefault,stroke_color=stroke_colorDefault,stroke_width=stroke_widthDefault).set_start(timestampI).set_duration(durationI)    
                     
                     if timestampJ == timestampI:
-                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=25, color='black',bg_color='yellow').set_start(timestampI).set_duration(durationI)
+                        word_clip = TextClip(wordI,font=fontMarked, fontsize=fontsizeMarked, color=colorMarked,bg_color=bg_colorMarked,stroke_color=stroke_colorMarked,stroke_width=stroke_widthMarked).set_start(timestampI).set_duration(durationI)
                     else:
-                        word_clip = TextClip(wordJ,font="DejaVu Mono Sans", fontsize=25, color='white').set_start(timestampI).set_duration(durationI)
+                        word_clip = TextClip(wordJ,font=fontDefault, fontsize=fontsizeDefault, color=colorDefault,stroke_color=stroke_colorDefault,stroke_width=stroke_widthDefault).set_start(timestampI).set_duration(durationI)
                     
                     word_clips.append(word_clip)
                     word_clips.append(space_clip)
-                # Define the maximum width before wrapping to the next line
+
                 
 
-                # Adjust the positions of each text clip to wrap when exceeding max_width
+
                 cumulative_width = 0
                 cumulative_height = 0
                 line_height = max([clip.h for clip in word_clips])
@@ -368,111 +557,134 @@ def main(videoId):
                 for clip in word_clips:
                     if cumulative_width + clip.w > frame_width-borderBettewnText:
                         cumulative_width = 0
-                        cumulative_height += line_height  # Move to the next line
+                        cumulative_height += line_height  
                     positioned_clips.append(clip.set_position((cumulative_width, cumulative_height)))
                     cumulative_width += clip.w
 
-                # Calculate the final dimensions
+
                 final_width = frame_width-borderBettewnText
                 final_height = cumulative_height + line_height
 
-                # Create the final composite video clip
+
                 text_clip = CompositeVideoClip(positioned_clips, size=(final_width, final_height)).set_position("center")
                 text_clips.append(text_clip)
+            transcriptForTiktok.append(totalForTiktok)
     
         
-        # Combine the text clips with the original composite_clip
+
         final_clips = [composite_clip] + text_clips
         final_composite_clip = CompositeVideoClip(final_clips, size=(frame_width, frame_height))
-        
-        
-        
-        
-        
-        
-        # Add audio to the final composite clip
-        audio_clip = AudioFileClip(f"{download_path}{videoId}.mp3")
-        #TODO: --^
-        
 
         
-        final_composite_clip = final_composite_clip.set_audio(audio_clip)
+        final_composite_clip = final_composite_clip.set_audio(audio)
         
-        # Write the final video to file
         final_composite_clip.write_videofile(clipsOutputPath, fps=frame_rate, codec='libx264', audio_codec='aac', verbose=True, logger='bar')
-        print(yt.title)
+        os.remove(f"{download_path}{videoId}.mp3")
+        os.remove(f"{download_path}{videoId}.wav")
+
+
         captions = ""
         transcript_list = sorted(transcript.items())
-        for timestamp, word in transcript_list:
-            captions += word + " "
+        for chunk in transcriptForTiktok:
+            captions += chunk + "\n"
+        captions
+
+
         
+        # - {yt.title}: Title of the video
+        prompt = f"""Given the following information:
+- {yt.author}: Name of the YouTube channel
+- {captions}: Transcript of the video
 
-#         prompt = f"""Given the following information:
-# - {Captions}: Initial caption or description of the video content
-# - {title}: Title of the video
-# - {youtube_channel}: Name of the YouTube channel
+Create an optimized caption for the video following these guidelines:
 
-# Create an optimized caption for the video following these guidelines:
+1. Align the caption with the video's essence, capturing its core message or theme.
 
-# 1. Align the caption with the video's essence, capturing its core message or theme.
+2. Break the caption into short, digestible lines using line breaks for better readability.
 
-# 2. Break the caption into short, digestible lines using line breaks for better readability.
+3. Use strategic capitalization for emphasis on key words or phrases.
 
-# 3. Use strategic capitalization for emphasis on key words or phrases.
+4. Make the caption relatable to the target audience, considering their experiences and emotions.
 
-# 4. Make the caption relatable to the target audience, considering their experiences and emotions.
+5. If possible incorporate a brilliant question that encourages viewers to share their opinions and experiences in the comments.
 
-# 5. If possible incorporate a brilliant question that encourages viewers to share their opinions and experiences in the comments.
+6. Include a strong call-to-action (CTA) that prompts engagement (like, comment, share, or follow).
 
-# 6. Include a strong call-to-action (CTA) that prompts engagement (like, comment, share, or follow).
+7. Add 8 relevant hashtags at the end to increase discoverability and reach a broader audience.
 
-# 7. Add 8 relevant hashtags at the end to increase discoverability and reach a broader audience.
+Output Format:
+```
+[Brilliant question]
 
-# Output Format:
-# ```
-# [Optimized multi-line caption with emphasis] or/and [Brilliant question] or/and [Call-to-action]
+[Call-to-action]
 
-# [8 relevant hashtags]
-# ```
+[10 relevant hashtags]
+```
+"""
 
-# Example Output:
-# ```
-# Laid off and feeling LOST? 💼➡️🆕
+        system_message = """You are an expert social media content creator specializing in crafting engaging and optimized captions for video content. Your task is to create the best possible caption for a given video based on provided information. Your captions should be attention-grabbing, relatable, and designed to maximize engagement and reach."""
+        tkCaption = textToText(prompt,system_message)
+        print(f"--------------------------------------------------------system_message--------------------------------------------------------\n\n{system_message}\n\n--------------------------------------------------------prompt--------------------------------------------------------\n\n{prompt}\n\n--------------------------------------------------------result--------------------------------------------------------\n\n{tkCaption}\n\n----------------------------------------------------------------------------------------------------------------")
+        caption = tkCaption.replace("```", "")
 
-# It's time to REINVENT yourself! 🚀
 
-# Your next role could be your BEST yet 💪
 
-# How are you turning your setback into a COMEBACK? 🤔
-
-# Double-tap if you're ready to LEVEL UP your career! 👆❤️
-
-# #CareerTransition #JobSearch #PersonalBranding #NetworkingTips #ProfessionalDevelopment #CareerAdvice #JobMarket #SuccessMindset
-# ```
-# """
-        text = "Salish checks Nidal's six pack😭💗 #fyp  #viralvideo #viral #fy #blowup #activies? #nalish #nalishforever"
-        upload = TikTokUpload()
-        upload.execute_actions(text)
-        os.remove(clipsOutputPath)
         
+        embedding = get_embedding(captions)
+        TKLink = "NULL"
+        brainRoot = brainRootCode
+        brainRoot_endTime = brainRoot_startTime+duration_seconds
+        event_date = datetime.now().strftime('%Y-%m-%d')
+        embedding_bytes = array.array('d', embedding).tobytes()
+
+        # print(f"videoId:{videoId}, channel{channel}, start_time{start_time}, end_time{end_time}, event_date{event_date}, embedding{embedding}, caption{caption}, TKLink{TKLink}, brainRoot{brainRoot}, brainRoot_startTime{brainRoot_startTime}, brainRoot_endTime{brainRoot_endTime}, sizeOfCaptionstoGptSEC{sizeOfCaptionstoGptSEC}, distanceFromStarEndSEC{distanceFromStarEndSEC}, distanceFromClipsSEC{distanceFromClipsSEC}, getHowMany{getHowMany}, getManyInstedOfThreshold{getManyInstedOfThreshold}, retentionThreshold{retentionThreshold}, startClipBeforeSEC{startClipBeforeSEC}, startClipAfterSEC{startClipAfterSEC}, qualityOfVideo{qualityOfVideo}, borderBettewnText{borderBettewnText}, maxCharsText{maxCharsText}, fontDefault{fontDefault}, fontsizeDefault{fontsizeDefault}, colorDefault{colorDefault}, stroke_colorDefault{stroke_colorDefault}, stroke_widthDefault{stroke_widthDefault}, fontMarked{fontMarked}, fontsizeMarked{fontsizeMarked}, colorMarked{colorMarked}, bg_colorMarked{bg_colorMarked}, stroke_colorMarked{stroke_colorMarked}, stroke_widthMarked{stroke_widthMarked}, whatCaptalazation{whatCaptalazation}")
+        cursor.execute('DELETE FROM TKCuts WHERE videoId = ? AND start_time = ? AND end_time = ?', (videoId,start_time,end_time))
+        insert_query = """
+        INSERT INTO TKCuts (
+            videoId, channel, start_time, end_time, event_date, embedding, caption, TKLink, brainRoot, brainRoot_startTime, brainRoot_endTime, sizeOfCaptionstoGptSEC, distanceFromStarEndSEC, distanceFromClipsSEC, getHowMany, getManyInstedOfThreshold, retentionThreshold, startClipBeforeSEC, startClipAfterSEC, qualityOfVideo, borderBettewnText, maxCharsText, fontDefault, fontsizeDefault, colorDefault, stroke_colorDefault, stroke_widthDefault, fontMarked, fontsizeMarked, colorMarked, bg_colorMarked, stroke_colorMarked, stroke_widthMarked, whatCaptalazation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor.execute(insert_query, (
+            videoId, channel, start_time, end_time, event_date, embedding_bytes, caption, TKLink, brainRoot, brainRoot_startTime, brainRoot_endTime, sizeOfCaptionstoGptSEC, distanceFromStarEndSEC, distanceFromClipsSEC, getHowMany, getManyInstedOfThreshold, retentionThreshold, startClipBeforeSEC, startClipAfterSEC, qualityOfVideo, borderBettewnText, maxCharsText, fontDefault, fontsizeDefault, colorDefault, stroke_colorDefault, stroke_widthDefault, fontMarked, fontsizeMarked, colorMarked, bg_colorMarked, stroke_colorMarked, stroke_widthMarked, whatCaptalazation
+        ))
+        connection.commit()
+
+
+
+
+
         
             
     download_video()
-    #TODO: Delete the bellow     video = VideoFileClip(download_path+videoId+".mp4")
-    video = VideoFileClip(download_path+videoId+".mp4")
     for i,timeStamp in enumerate(timeStamps):
 
         timeStamps[i] = [timeStamp[0]-startClipBeforeSEC,timeStamp[1]+startClipAfterSEC]
     
     for timeStamp in timeStamps:
-        plot_image_path = create_plot(videoId, audienceRetentionData, timeStamp)
-        clip(timeStamp[0], timeStamp[1], plot_image_path)
+        # plot_image_path = create_plot(videoId, audienceRetentionData, timeStamp)
+        clip(timeStamp[0], timeStamp[1])
     
     os.remove(download_path+videoId+".mp4")
 
     
-     
+cursor.execute("SELECT * FROM YTVideos ORDER BY RANDOM()")
+rows = cursor.fetchall()
+for (video_id1, channel1, title1, position_found1, views1, date1, search_query1, data1) in rows:
+    if views1 > 100000:
+        print("next")
+        try:
+            print(video_id1)
+            yt = YouTube(f'https://www.youtube.com/watch?v={video_id1}')
+            if 10800 > yt.length > 120:
+
+                main(video_id1, yt)  
+        except Exception as e:
+            print(f"An error occurred: {e}")
     
-main("ZYsJQmKeZb4")  
     
-    
+    #  RrjEtmeby64 KY_en3cGYVs mtWDLLtxoHY
+
+
+
+
