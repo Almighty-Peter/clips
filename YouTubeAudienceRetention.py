@@ -4,8 +4,9 @@ from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 import re
 import time
-
-
+from pytube import YouTube
+import sqlite3
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -18,27 +19,43 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-def find_element(driver, start_index, end_index, timeout=30, div=2):
-            end_time = time.time() + timeout
-            while time.time() < end_time:
-                for i in range(start_index, end_index + 1):
+connection = sqlite3.connect('local_database.db')
+cursor = connection.cursor()
 
-                    xpath = '/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[{}]/div[1]/div[1]/div[2]'.format(i) #[2]-->[{div}]
-                    try:    
-                        try:     
-                            WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH,'/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[{}]/div[1]/div[1]/div[3]'.format(i))))
-                        except:
-                            pass
-                        else:
-                            return None
-                            # TODO: """here should triger the code to run many time and change div"""
-                        element = WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH, xpath)))
-                        print("Found Data")
-                        return element
-                    except:
-                        continue
+def match_extract(patern, response):
+    videos = []
+    matches_video = re.findall(patern, response)
+    for video in matches_video:
+        if (video in videos):
+            pass
+        else:
+            videos.append(video)
+    return videos
 
-            return None
+def video_exists(video_id):
+    cursor.execute("SELECT 1 FROM YTVideos WHERE video_id = ?", (video_id,))
+    return cursor.fetchone() is not None
+
+def find_element(driver, start_index, end_index, div, timeout=20):
+    end_time = time.time() + timeout
+    foundMore = False
+    while time.time() < end_time:
+        for i in range(start_index, end_index + 1):
+            xpath = f'/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[{i}]/div[1]/div[1]/div[{div}]'
+            try:    
+                try:     
+                    WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH,f'/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[{i}]/div[1]/div[1]/div[{div+1}]')))
+                except:
+                    pass
+                else:
+                    foundMore = True
+                element = WebDriverWait(driver, 1).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                print("Found Data")
+                return element, foundMore
+            except:
+                continue
+
+    return None
 
 def getYoutubeAudienceRetention(videoId, plot=False, show=False):
 
@@ -57,10 +74,15 @@ def getYoutubeAudienceRetention(videoId, plot=False, show=False):
     try:
         url = f"https://www.youtube.com/watch?v={videoId}"
 
-        found = True
+        
+        div = 2
+        totalData = []
+
+        found = False
+        foundMore = True
         attempt = 0
         allowedAttempts = 5
-        while found and attempt < allowedAttempts:
+        while found == False and attempt < allowedAttempts:
             # Open the YouTube link
             driver.get(url)
         
@@ -75,56 +97,66 @@ def getYoutubeAudienceRetention(videoId, plot=False, show=False):
             driver.execute_script("arguments[0].setAttribute('class', arguments[1]);", element, new_class_value)
             print("Element modified successfully.")
             
-        
-            
-            
-            # Base XPath with a placeholder for the index
-            """IMPORTANT for videos with many parts, it takes only the first, in theory this is solvable by looking the difrence between each and then assign them to parts based on theire length, but this is for future me to do
-            or maybe even just add them"""
-        
-            
-            # Attempt to find the element
-            element = find_element(driver, 20, 50)
-        
-            # Get the outer HTML of the element
-            element_html = element.get_attribute('outerHTML')
-        
-            # Use BeautifulSoup to parse the HTML
-            soup = BeautifulSoup(element_html, 'html.parser')
-        
-        
-        
-            pattern = re.compile(r'd="M ([^"]+)"')
-            # Search for the pattern in the HTML content
-            match = pattern.search(str(soup))
-            
-            
-            if match:
-                data = match.group(1)
-                print(f"Extracted data")
-                found = False
-            else:
-                attempt += 1
-                print(f"data not downloaded. (TRYING AGAIN Attempt:{attempt}/{allowedAttempts})")
-        # here should make it so that the program stops to try to get this video
 
-        elements = [pair for pair in data.split() if pair != 'C']
-        
-        # Initialize the resulting list
-        result = []
-        
-        # Process each element
-        for element in elements:
-            # Split by comma and convert to float
-            x, y = map(float, element.split(','))
-            # Append the pair to the result list
-            result.append([x, y])
-       
+
+            try:
+                element, foundMore = find_element(driver, 20, 50, div)
+            except:
+                print(f"data not Extracted. (TRYING AGAIN Attempt:{attempt}/{allowedAttempts})")
+            else:
+
+
+                element_html = element.get_attribute('outerHTML')
+
+                soup = BeautifulSoup(element_html, 'html.parser')
+
+                pattern = re.compile(r'd="M ([^"]+)"')
+
+                match = pattern.search(str(soup))
+
+
+                
+                attempt += 1
+                if match:
+                    data = match.group(1)
+                    totalData.append(data)
+                    if foundMore:
+                        
+                        print(div)
+                        print("foundMore")
+                        attempt = 0
+                        div = div+1
+                    else:
+                        found = True
+                else:
+                    print(f"data not Extracted. (TRYING AGAIN Attempt:{attempt}/{allowedAttempts})")
+                    print(element)
+
+        totalResult = []
+
+
+        for data in totalData:
+            print(len(data))
+            elements = [pair for pair in data.split() if pair != 'C']
+            
+            result = []
+            
+            # Process each element
+            for element in elements:
+                # Split by comma and convert to float
+                nill, y = map(float, element.split(','))
+                # Append the pair to the result list
+                result.append(y)
+
+            totalResult.extend(result)
 
         if plot:
-            x_values = [pair[0] for pair in result]
-            y_values = [pair[1] for pair in result]
+            yt = YouTube(f'https://www.youtube.com/watch?v={videoId}')
+            length = yt.length  
+            x_values = [(length * ((i+1)/len(totalResult))) for i in range(len(totalResult))]
+            y_values = [pair for pair in totalResult]
             
+
             # Plot the data
             plt.figure(figsize=(10, 6))
             plt.plot(x_values, y_values, marker='o', linestyle='-')
@@ -132,17 +164,54 @@ def getYoutubeAudienceRetention(videoId, plot=False, show=False):
             plt.xlabel('X Values')
             plt.ylabel('Y Values')
             plt.grid(True)
-            plt.show()
+            plt.savefig("plot.png")
+
+            plt.close()
+        
+
     
         
     
     
     finally:
-        
-        if show == 0:  
-            driver.quit()
-            
-    return result
 
-videoId = "f-WdfjE7X8g"
+        element = driver.find_element(By.XPATH, '//*[@id="text"]/a')
+        href_value = element.get_attribute('href')
+        page_source = driver.page_source
+        yt_codes = match_extract(r'watch\?v=(.{11})', page_source)
+        date = datetime.now().strftime('%Y-%m-%d')
+
+
+        search_query = f"https://www.youtube.com/watch?v={videoId}"
+        data = "NULL"
+
+        for position_found,video_id in enumerate(yt_codes):
+            if not video_exists(video_id):
+                try:
+                    yt = YouTube("https://www.youtube.com/watch?v="+video_id)
+                    title = yt.title
+                    channel = yt.author
+                    views = yt.views
+
+                    if views == None:
+                        views = "NULL"
+
+                    print(f"channel : {channel} \n\ntitle : {title}\n\n----------------------\n\n")
+                    insert_query = """
+                    INSERT INTO YTVideos (
+                        video_id, channel, title, position_found, views, date, search_query, data
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                    cursor.execute(insert_query, (video_id, channel, title, position_found, views, date, search_query, data))
+                    connection.commit()
+                except:
+                    pass
+            else:
+                print(f"Video ID {video_id} already exists in the database.")
+            
+        driver.quit()
+            
+    return href_value[25:], totalResult
+
+
 
