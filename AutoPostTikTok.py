@@ -1,109 +1,29 @@
+lastVid = '//*[@id="main-content-others_homepage"]/div/div[2]/div[2]/div/div[1]/div[2]/div/a'
 
-""" click where to uplod file
-//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[1]/div/div/div/div[1]/div/div/div[2]/div[3]/button[1]/div/div
-//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[1]/div/div/div/div[1]
-
-click where to add description
-//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[1]/div/div[2]/div[1]/div/div/div
-
-post button
-//*[@id="root"]/div/div[2]/div[2]/div/div/div/div/div/div[4]/div/div[2]/div[8]/button[1]/div/div """
+import time
 
 
-# print('=====================================================================================================')
-# print('Heyy, you have to login manully on tiktok, so the bot will wait you 1 minute for loging in manually!')
-# print('=====================================================================================================')
-# time.sleep(8)
-# print('Running bot now, get ready and login manually...')
-# time.sleep(4)
+import json
+import numpy as np
+from scipy.spatial.distance import pdist, squareform
+import subprocess
+import sqlite3
+import pandas as pd
 
-# options = webdriver.ChromeOptions()
-# bot = webdriver.Chrome(options=options,  executable_path=CM().install())
-# bot.set_window_size(1680, 900)
-
-# bot.get('https://www.tiktok.com/login')
-# ActionChains(bot).key_down(Keys.CONTROL).send_keys(
-#     '-').key_up(Keys.CONTROL).perform()
-# ActionChains(bot).key_down(Keys.CONTROL).send_keys(
-#     '-').key_up(Keys.CONTROL).perform()
-# print('Waiting 50s for manual login...')
-# time.sleep(50)
-# bot.get('https://www.tiktok.com/upload/?lang=en')
-# time.sleep(3)
+import csv
+from sklearn.manifold import TSNE
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
+import numpy as np
+import random
+import array
+from collections import defaultdict
+import os
+import subprocess
+import string
 
 
-# def check_exists_by_xpath(driver, xpath):
-#     try:
-#         driver.find_element_by_xpath(xpath)
-#     except NoSuchElementException:
-#         return False
 
-#     return True
-
-
-# def upload(video_path):
-#     while True:
-#         file_uploader = bot.find_element_by_xpath(
-#             '//*[@id="main"]/div[2]/div/div[2]/div[2]/div/div/input')
-
-#         file_uploader.send_keys(video_path)
-
-#         caption = bot.find_element_by_xpath(
-#             '//*[@id="main"]/div[2]/div/div[2]/div[3]/div[1]/div[1]/div[2]/div/div[1]/div/div/div/div/div/div/span')
-
-#         bot.implicitly_wait(10)
-#         ActionChains(bot).move_to_element(caption).click(
-#             caption).perform()
-#         # ActionChains(bot).key_down(Keys.CONTROL).send_keys(
-#         #     'v').key_up(Keys.CONTROL).perform()
-
-#         with open(r"caption.txt", "r") as f:
-#             tags = [line.strip() for line in f]
-
-#         for tag in tags:
-#             ActionChains(bot).send_keys(tag).perform()
-#             time.sleep(2)
-#             ActionChains(bot).send_keys(Keys.RETURN).perform()
-#             time.sleep(1)
-
-#         time.sleep(5)
-#         bot.execute_script("window.scrollTo(150, 300);")
-#         time.sleep(5)
-
-#         post = WebDriverWait(bot, 100).until(
-#             EC.visibility_of_element_located(
-#                 (By.XPATH, '//*[@id="main"]/div[2]/div/div[2]/div[3]/div[5]/button[2]')))
-
-#         post.click()
-#         time.sleep(30)
-
-#         if check_exists_by_xpath(bot, '//*[@id="portal-container"]/div/div/div[1]/div[2]'):
-#             reupload = WebDriverWait(bot, 100).until(EC.visibility_of_element_located(
-#                 (By.XPATH, '//*[@id="portal-container"]/div/div/div[1]/div[2]')))
-
-#             reupload.click()
-#         else:
-#             print('Unknown error cooldown')
-#             while True:
-#                 time.sleep(600)
-#                 post.click()
-#                 time.sleep(15)
-#                 if check_exists_by_xpath(bot, '//*[@id="portal-container"]/div/div/div[1]/div[2]'):
-#                     break
-
-#         if check_exists_by_xpath(bot, '//*[@id="portal-container"]/div/div/div[1]/div[2]'):
-#             reupload = WebDriverWait(bot, 100).until(EC.visibility_of_element_located(
-#                 (By.XPATH, '//*[@id="portal-container"]/div/div/div[1]/div[2]')))
-#             reupload.click()
-
-#         time.sleep(1)
-
-
-# # ================================================================
-# # Here is the path of the video that you want to upload in tiktok.
-# # Plese edit the path because this is different to everyone.
-# upload(r"C:\Users\redi\Videos\your-video-here.mov")
-# # ================================================================
 
 from pynput import keyboard
 
@@ -131,44 +51,45 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 class TikTokUpload:
-    URLLogin = 'https://www.tiktok.com/login/phone-or-email/email'
-    URLUpload = 'https://www.tiktok.com/upload/?lang=en'
 
 
-    def __init__(self, selenium= False):
-        
-        if selenium:
+    def __init__(self, userName="Null",getWeb=False):
+        if getWeb:
+            self.userName = userName
             self.driver = self.__open_browser()
-            self.uploadSelenium()
+            self.driver.get(f'https://www.tiktok.com/@{userName}')
+        
 
-    def uploadSelenium(self):
-        userName = 'say_whattt1'
-        password = 'hQH7Panh$3'
-        self.driver.get(self.URLLogin)
+    def findLastVideo(self, caption, retries=3):
+        caption = caption.replace("\n\n\n\n"," ").replace("\n\n\n"," ").replace("\n\n"," ").replace("\n"," ")[:140]
+        lastVid_xpath = '//*[@id="main-content-others_homepage"]/div/div[2]/div[2]/div/div[1]/div[2]/div/a'
         
-        
-        # Enter Username
-        WebDriverWait(self.driver, 1000).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[1]/input'))
-        )
-        ActionChains(self.driver) \
-            .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[1]/input'), userName) \
-            .send_keys(Keys.ENTER).pause(3).perform()
-        
-        # Enter Password
-        WebDriverWait(self.driver, 1000).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[2]/div/input'))
-        )
-        ActionChains(self.driver) \
-            .send_keys_to_element(self.driver.find_element(By.XPATH, '//*[@id="loginContainer"]/div[1]/form/div[2]/div/input'), password) \
-            .send_keys(Keys.ENTER).pause(3).perform()
-        
-        sleep(1000)
-        
-        while False:
-            # TODO: do it so that it can use selenium, but i found some problems
-            pass
+        for attempt in range(retries):
+            self.driver.get(f'https://www.tiktok.com/@{self.userName}')
+            sleep(20)
+            try:
 
+                lastVidElement = WebDriverWait(self.driver, 100).until(
+                    EC.element_to_be_clickable((By.XPATH, lastVid_xpath))
+                )
+
+
+                videoTitle = lastVidElement.get_attribute("title")
+
+                print(f'Title   :"{videoTitle[:140]}')
+                print(f'Caption :"{caption}"')
+
+                if videoTitle[:140] == caption:
+
+                    return lastVidElement.get_attribute("href")
+            except Exception as e:
+                print(f"Attempt {attempt+1} failed: {e}")
+
+
+
+        
+
+        return None
 
     @staticmethod
     def __open_browser():
@@ -217,11 +138,13 @@ class TikTokUpload:
         actions = []
 
         # 1. Click on the file manager
+        print('1. Click on the file manager')
         self.wait_for_enter()
         coordinates = pyautogui.position()
         actions.append({"action": "file manager", "coordinates": [coordinates.x,coordinates.y]})
 
         # 2. Drag and Drop
+        print('2. Drag and Drop')
         self.wait_for_enter()
         start_pos = pyautogui.position()
         self.wait_for_enter()
@@ -229,18 +152,21 @@ class TikTokUpload:
         actions.append({"action": "drag and drop", "start": [start_pos.x,start_pos.y], "end": [end_pos.x,end_pos.y]})
 
         # 3. Click on text
+        print('3. Click on text')
         self.wait_for_enter()
         coordinates = pyautogui.position()
         actions.append({"action": "text", "coordinates": [coordinates.x,coordinates.y]})
 
 
         # 7. Click on post
+        print('7. Click on post')
         self.wait_for_enter()
         coordinates = pyautogui.position()
         actions.append({"action": "post", "coordinates": [coordinates.x,coordinates.y]})
 
 
         # 8. Click upload another video
+        print('8. Click upload another video')
         self.wait_for_enter()
         coordinates = pyautogui.position()
         actions.append({"action": "upload another video", "coordinates": [coordinates.x,coordinates.y]})
@@ -250,25 +176,31 @@ class TikTokUpload:
         with open('/Users/peternyman/Clips/actions.json', 'w') as f:
             json.dump(actions, f, indent=4)
 
-    def execute_actions(self,text):
+    def execute_actions(self,cut):
         with open('/Users/peternyman/Clips/actions.json', 'r') as file:
             actions = json.load(file)
 
         for action in actions:
+
             if action["action"] == "file manager":
                 pyautogui.click(action["coordinates"])
                 sleep(1)
+                pyautogui.hotkey('command', 'f')  # (Windows), change 'command' to 'ctrl'
+                video = f'YT={cut['VSE'][0]}S={cut['VSE'][1]}E={cut['VSE'][2]}.mp4'
+                pyperclip.copy(self.text_until_first_hashtag(video))
+                pyautogui.hotkey('command', 'v')
+                sleep(1)
             elif action["action"] == "drag and drop":
                 pyautogui.moveTo(action["start"])
+
                 pyautogui.dragTo(action["end"], duration=1, button='left') 
-                print("drag and drop")
             elif action["action"] == "text":
                 sleep(4)
                 pyautogui.click(action["coordinates"])
+                sleep(3)
+                pyautogui.hotkey('command', 'a')  # (Windows), change 'command' to 'ctrl'
                 sleep(1)
-                pyautogui.hotkey('command', 'a')  # Select all text (Windows), change 'ctrl' to 'command' for macOS
-                sleep(1)
-                self.type(text)  # Typing the text
+                self.type(cut['Caption'])  # Typing the text
                 sleep(0.5)
             elif action["action"] == "post":
                 pyautogui.moveTo(action["coordinates"])
@@ -277,11 +209,12 @@ class TikTokUpload:
                 sleep(0.5)
                 pyautogui.click(action["coordinates"])
             elif action["action"] == "upload another video":
-                sleep(3)
+                sleep(5)
                 pyautogui.click(action["coordinates"])
                 sleep(1)
                 pyautogui.scroll(1000)  # Scroll back up to the top
-
+        sleep(60)
+        return self.findLastVideo(cut['Caption'])
 
 # save = TikTokUpload()
 # save.saveActions()
@@ -290,10 +223,87 @@ class TikTokUpload:
 
 
 
+connection = sqlite3.connect('local_database.db')
+cursor = connection.cursor()
+
+
+cursor.execute("SELECT videoId, start_time, end_time, embedding, caption FROM TKcuts")
+tkcuts_rows = cursor.fetchall()
+tkCuts = []
+
+
+for row in tkcuts_rows:
+    embedding_blob = row[3]
+    embedding_array = array.array('d') 
+    embedding_array.frombytes(embedding_blob)
+    embedding = embedding_array.tolist()
+    tkCuts.append({
+        'VSE': [row[0], row[1], row[2]], 
+        'Embedding': embedding,
+        'Caption': row[4]
+    })
+
+tkCuts = pd.DataFrame(tkCuts)
+tkCuts.columns = ['VSE', 'Embedding', 'Caption']
+
+
+channel = "trendtonic22"
+alias = "TrendTonic"
+tikTokUpload = TikTokUpload(userName=channel,getWeb=True)
+input("continue:")
+sleep(4)
 
 
 
+tkChannels = []
+cursor.execute("SELECT name, embedding FROM TkChannel")
+tkchannels_rows = cursor.fetchall()
+
+for row in tkchannels_rows:
+    embedding_blob = row[1]
+    embedding_array = array.array('d') 
+    embedding_array.frombytes(embedding_blob)
+    embedding = embedding_array.tolist()
+    tkChannels.append({
+        'Name': row[0], 
+        'Embedding': embedding
+    })
+
+tkChannels = pd.DataFrame(tkChannels)
+tkChannels.columns = ['Name', 'Embedding']
+
+howMany = {name: 0 for name in tkChannels['Name']}  
+
+for i, cut in tkCuts.iterrows():
+    max_similarity = -1
+    closest_channel = None  
+
+
+    cut_embedding_reshaped = np.array(cut['Embedding']).reshape(1, -1)
+
+    for j, channel in tkChannels.iterrows():
+        channel_embedding_reshaped = np.array(channel['Embedding']).reshape(1, -1)
+        similarity = cosine_similarity(cut_embedding_reshaped, channel_embedding_reshaped)[0][0]
+
+
+        if similarity > max_similarity:
+            max_similarity = similarity
+            closest_channel = channel['Name'] 
 
 
 
+    
+    if closest_channel == alias:
 
+        TKLink = tikTokUpload.execute_actions(cut)
+        if TKLink != None:
+            print(TKLink)
+            sql = """
+            UPDATE TKcuts
+            SET TKLink = ?
+            WHERE videoId = ? AND start_time = ? AND end_time = ?;
+            """
+            cursor.execute(sql, (TKLink, cut['VSE'][0], cut['VSE'][1], cut['VSE'][2]))
+            connection.commit()
+
+connection.close()
