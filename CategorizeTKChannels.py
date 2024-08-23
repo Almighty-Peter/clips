@@ -41,7 +41,7 @@ cursor = connection.cursor()
 
 
 def insert_point(coordinate):
-    sql = '''INSERT INTO TKChannel(embedding, name) VALUES(?,?)'''
+    sql = '''INSERT INTO TkChannel(embedding, name) VALUES(?,?)'''
 
     cursor.execute(sql, (coordinate,''.join(random.choice(string.ascii_letters) for _ in range(11))))
     connection.commit()
@@ -53,17 +53,16 @@ def main(num_points, dimensions, final_count):
     points = np.random.rand(num_points, dimensions)
     remaining_points = remove_closest_points(points, final_count)
     
-
+    
     try:
-        sql_drop = 'DROP TABLE IF EXISTS TKChannel;'
+        sql_drop = 'DROP TABLE IF EXISTS TkChannel;'
         cursor.execute(sql_drop)
     except Exception as e:
         pass
 
 
-
     sql = '''
-    CREATE TABLE IF NOT EXISTS TKChannel (
+    CREATE TABLE IF NOT EXISTS TkChannel (
         id INTEGER PRIMARY KEY,
         name TEXT,
         embedding TEXT NOT NULL
@@ -77,8 +76,10 @@ def main(num_points, dimensions, final_count):
 
 
 dimensions = 3072 
-num_points = 5000  
+num_points = 500  
 final_count = 20 
+# remaining_points = main(num_points, dimensions, final_count,)
+
 
 
 
@@ -102,10 +103,6 @@ for row in tkcuts_rows:
 tkCuts = pd.DataFrame(tkCuts)
 tkCuts.columns = ['VSE', 'Embedding']
 
-
-
-print(f"num_points. {num_points}")
-remaining_points = main(num_points, dimensions, final_count,)
 
 tkChannels = []
 cursor.execute("SELECT name, embedding FROM TkChannel")
@@ -153,4 +150,7 @@ for i, cut in tkCuts.iterrows():
 for word, count in howMany.items():
     print(f"{word}: --> {count}")
 print("\n\n")
+
+
 connection.close()
+
