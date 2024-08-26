@@ -1,4 +1,4 @@
-lastVid = '//*[@id="main-content-others_homepage"]/div/div[2]/div[2]/div/div[1]/div[2]/div/a'
+
 
 import time
 
@@ -186,6 +186,7 @@ class TikTokUpload:
                 pyautogui.click(action["coordinates"])
                 sleep(1)
                 pyautogui.hotkey('command', 'f')  # (Windows), change 'command' to 'ctrl'
+                sleep(1)
                 video = f'YT={cut['VSE'][0]}S={cut['VSE'][1]}E={cut['VSE'][2]}.mp4'
                 pyperclip.copy(self.text_until_first_hashtag(video))
                 pyautogui.hotkey('command', 'v')
@@ -227,6 +228,23 @@ connection = sqlite3.connect('local_database.db')
 cursor = connection.cursor()
 
 
+
+def check_row_exists(video_id, start_time, end_time):
+    
+    # Update the query to check that 'link' is not NULL
+    query = """
+    SELECT EXISTS(
+        SELECT 1 FROM TKcuts
+        WHERE videoId = ? AND start_time = ? AND end_time = ? AND TKLink IS NOT "NULL"
+    )
+    """
+    
+    cursor.execute(query, (video_id, start_time, end_time))
+    exists = cursor.fetchone()[0]
+
+    return exists
+
+
 cursor.execute("SELECT videoId, start_time, end_time, embedding, caption FROM TKcuts")
 tkcuts_rows = cursor.fetchall()
 tkCuts = []
@@ -247,8 +265,8 @@ tkCuts = pd.DataFrame(tkCuts)
 tkCuts.columns = ['VSE', 'Embedding', 'Caption']
 
 
-channel = "trendtonic22"
-alias = "TrendTonic"
+channel = "crashchaostv"
+alias = "CrashChaosTV"
 tikTokUpload = TikTokUpload(userName=channel,getWeb=True)
 input("continue:")
 sleep(4)
@@ -294,16 +312,19 @@ for i, cut in tkCuts.iterrows():
 
     
     if closest_channel == alias:
+        if check_row_exists(cut['VSE'][0], cut['VSE'][1], cut['VSE'][2]) == False:
 
-        TKLink = tikTokUpload.execute_actions(cut)
-        if TKLink != None:
-            print(TKLink)
-            sql = """
-            UPDATE TKcuts
-            SET TKLink = ?
-            WHERE videoId = ? AND start_time = ? AND end_time = ?;
-            """
-            cursor.execute(sql, (TKLink, cut['VSE'][0], cut['VSE'][1], cut['VSE'][2]))
-            connection.commit()
+            TKLink = tikTokUpload.execute_actions(cut)
+            if TKLink != None:
+                print(TKLink)
+                sql = """
+                UPDATE TKcuts
+                SET TKLink = ?
+                WHERE videoId = ? AND start_time = ? AND end_time = ?;
+                """
+                cursor.execute(sql, (TKLink, cut['VSE'][0], cut['VSE'][1], cut['VSE'][2]))
+                connection.commit()
+        else:
+            print("already upploaded")
 
 connection.close()
