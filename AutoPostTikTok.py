@@ -265,8 +265,8 @@ tkCuts = pd.DataFrame(tkCuts)
 tkCuts.columns = ['VSE', 'Embedding', 'Caption']
 
 
-channel = "crashchaostv"
-alias = "CrashChaosTV"
+channel = "GlowTimeWithGrace"
+alias = "GlowTimeWithGrace"
 tikTokUpload = TikTokUpload(userName=channel,getWeb=True)
 input("continue:")
 sleep(4)
@@ -310,8 +310,9 @@ for i, cut in tkCuts.iterrows():
 
 
 
-    
+    print(closest_channel)
     if closest_channel == alias:
+        
         if check_row_exists(cut['VSE'][0], cut['VSE'][1], cut['VSE'][2]) == False:
 
             TKLink = tikTokUpload.execute_actions(cut)
